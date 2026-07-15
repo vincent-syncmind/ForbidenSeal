@@ -2,7 +2,6 @@ package com.vincent.forbiddenseal.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +11,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -163,8 +166,7 @@ private fun SealBoard(
                         x = cellSize * node.point.column,
                         y = cellSize * node.point.row,
                     )
-                    .size(cellSize)
-                    .clickable { onTap(node.point) },
+                    .size(cellSize),
                 contentAlignment = Alignment.Center,
             ) {
                 when (node.type) {
@@ -186,9 +188,79 @@ private fun SealBoard(
                 }
             }
         }
+
+        // A single transparent gesture layer handles both taps and freehand drawing.
+        // Sampling the finger trail prevents fast swipes from skipping cells.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(level.id) {
+                    val stepX = size.width / level.size
+                    val stepY = size.height / level.size
+
+                    fun pointAt(offset: Offset): GridPoint {
+                        val column = (offset.x / stepX).toInt().coerceIn(0, level.size - 1)
+                        val row = (offset.y / stepY).toInt().coerceIn(0, level.size - 1)
+                        return GridPoint(row, column)
+                    }
+
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+
+                        var previousOffset = down.position
+                        var previousPoint = pointAt(previousOffset)
+                        var moved = false
+                        onTap(previousPoint)
+
+                        drag(down.id) { change ->
+                            change.consume()
+                            val currentOffset = change.position
+                            val distance = (currentOffset - previousOffset).getDistance()
+                            if (distance > viewConfiguration.touchSlop / 3f) moved = true
+
+                            val sampleDistance = minOf(stepX, stepY) * 0.28f
+                            val sampleCount = maxOf(1, kotlin.math.ceil(distance / sampleDistance).toInt())
+
+                            for (sampleIndex in 1..sampleCount) {
+                                val fraction = sampleIndex.toFloat() / sampleCount
+                                val sample = Offset(
+                                    x = previousOffset.x + (currentOffset.x - previousOffset.x) * fraction,
+                                    y = previousOffset.y + (currentOffset.y - previousOffset.y) * fraction,
+                                )
+                                val candidate = pointAt(sample)
+                                if (candidate != previousPoint) {
+                                    // At an exact corner a pointer can jump diagonally. Insert one
+                                    // orthogonal cell according to the stronger movement axis.
+                                    val rowDelta = candidate.row - previousPoint.row
+                                    val columnDelta = candidate.column - previousPoint.column
+                                    if (kotlin.math.abs(rowDelta) == 1 && kotlin.math.abs(columnDelta) == 1) {
+                                        val dx = kotlin.math.abs(currentOffset.x - previousOffset.x) / stepX
+                                        val dy = kotlin.math.abs(currentOffset.y - previousOffset.y) / stepY
+                                        val bridge = if (dx >= dy) {
+                                            GridPoint(previousPoint.row, candidate.column)
+                                        } else {
+                                            GridPoint(candidate.row, previousPoint.column)
+                                        }
+                                        if (bridge != previousPoint) onTap(bridge)
+                                    }
+                                    onTap(candidate)
+                                    previousPoint = candidate
+                                }
+                            }
+                            previousOffset = currentOffset
+                        }
+
+                        // A stationary press has already been dispatched on down, so it behaves
+                        // exactly like the original tap input. `moved` is intentionally retained
+                        // for readability and future release animations.
+                        @Suppress("UNUSED_VARIABLE")
+                        val wasDrag = moved
+                    }
+                },
+        )
     }
 }
-
 @Composable
 private fun RuneNode(label: String, selected: Boolean, filled: Boolean) {
     val primary = MaterialTheme.colorScheme.primary

@@ -36,5 +36,5 @@ data class SealAttempt(
     val echoPath: List<GridPoint> = emptyList(),
     val completed: Boolean = false,
     val isFailed: Boolean = false,
-    val message: String = "点击入口，沿相邻节点引导灵力。",
+    val message: String = "点击入口，或按住入口直接画出灵路。",
 )

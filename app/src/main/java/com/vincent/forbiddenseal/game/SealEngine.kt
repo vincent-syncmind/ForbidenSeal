@@ -54,7 +54,18 @@ class SealEngine(private val level: SealLevel) {
         echo = mirrorCopy.echoPath
         val mirrorHitCore = core in echo
 
-        val reachedCore = newPath.last() == core || mirrorHitCore
+        val reachedCore = (newPath.last() == core || mirrorHitCore)
+        val allElementsVisited = level.nodes.filter { it.type == NodeType.ELEMENT }
+            .all { it.point in newPath }
+
+        if (reachedCore && !allElementsVisited) {
+            return current.copy(
+                selectedPath = newPath,
+                echoPath = echo,
+                message = "五行不全，禁制未开。需寻齐金木水火土。"
+            )
+        }
+
         return current.copy(
             selectedPath = newPath,
             echoPath = echo,
@@ -116,7 +127,7 @@ class SealEngine(private val level: SealLevel) {
 }
 
 object DemoLevels {
-    private const val GRID_SIZE = 4
+    private const val DEFAULT_GRID_SIZE = 4
 
     private fun level(
         id: Int,
@@ -124,9 +135,10 @@ object DemoLevels {
         text: String,
         entrance: GridPoint,
         core: GridPoint,
+        size: Int = DEFAULT_GRID_SIZE,
         special: Map<GridPoint, SealNode> = emptyMap(),
-    ) = SealLevel(id, title, text, size = GRID_SIZE, nodes = buildList {
-        repeat(GRID_SIZE) { r -> repeat(GRID_SIZE) { c ->
+    ) = SealLevel(id, title, text, size = size, nodes = buildList {
+        repeat(size) { r -> repeat(size) { c ->
             val p = GridPoint(r, c)
             add(special[p] ?: SealNode(p, when (p) {
                 entrance -> NodeType.ENTRANCE
@@ -142,8 +154,8 @@ object DemoLevels {
     private fun element(p: GridPoint, e: ElementType) = SealNode(p, NodeType.ELEMENT, element = e)
     private fun randomDrains(count: Int, entrance: GridPoint, core: GridPoint): Map<GridPoint, SealNode> {
         return buildList {
-            repeat(GRID_SIZE) { r ->
-                repeat(GRID_SIZE) { c ->
+            repeat(DEFAULT_GRID_SIZE) { r ->
+                repeat(DEFAULT_GRID_SIZE) { c ->
                     val point = GridPoint(r, c)
                     if (point != entrance && point != core) add(point)
                 }
@@ -162,28 +174,29 @@ object DemoLevels {
             "灵盛则生，灵衰则灭。每次推演会随机生成 3 枚吞灵符文。",
             GridPoint(3,0),
             GridPoint(0,3),
-            randomDrains(count = 3, entrance = GridPoint(3,0), core = GridPoint(0,3)),
+            special = randomDrains(count = 3, entrance = GridPoint(3,0), core = GridPoint(0,3)),
         ),
-        level(3, "第三卷 · 镜像", "触碰任一镜符后，另一枚镜符会复制当前灵路。若复制路径触及吞灵符，灵路崩散。", GridPoint(3,0), GridPoint(0,3), buildMap {
+        level(3, "第三卷 · 镜像", "触碰任一镜符后，另一枚镜符会复制当前灵路。若复制路径触及吞灵符，灵路崩散。", GridPoint(3,0), GridPoint(0,3), special = buildMap {
             put(GridPoint(2,1), mirror(GridPoint(2,1)))
             put(GridPoint(2,3), drain(GridPoint(2,3)))
             put(GridPoint(3,2), drain(GridPoint(3,2)))
             put(GridPoint(1,1), mirror(GridPoint(1,1)))
         }),
-        level(4, "第四卷 · 共鸣", "天涯亦可比邻。踏入一枚星符，会从另一枚星符现身。", GridPoint(3,0), GridPoint(0,3), buildMap {
+        level(4, "第四卷 · 共鸣", "天涯亦可比邻。踏入一枚星符，会从另一枚星符现身。", GridPoint(3,0), GridPoint(0,3), special = buildMap {
             put(GridPoint(3,1), resonance(GridPoint(3,1), 1))
             put(GridPoint(1,2), resonance(GridPoint(1,2), 1))
             listOf(GridPoint(2,0),GridPoint(2,1),GridPoint(2,2),GridPoint(2,3)).forEach { put(it, drain(it)) }
         }),
-        level(5, "第五卷 · 五行", "五行循环，生生不息。依相生之序连接五枚灵符。", GridPoint(3,0), GridPoint(0,3), buildMap {
-            put(GridPoint(3,1), element(GridPoint(3,1), ElementType.WOOD))
-            put(GridPoint(3,2), element(GridPoint(3,2), ElementType.FIRE))
-            put(GridPoint(2,2), element(GridPoint(2,2), ElementType.EARTH))
-            put(GridPoint(1,2), element(GridPoint(1,2), ElementType.METAL))
-            put(GridPoint(1,1), element(GridPoint(1,1), ElementType.WATER))
-            listOf(GridPoint(2,0),GridPoint(2,1),GridPoint(1,0),GridPoint(0,1)).forEach { put(it, drain(it)) }
+        level(5, "第五卷 · 五行", "五行循环，生生不息。依相生之序连接五枚灵符。此禁需寻齐五行方可破除。", GridPoint(5,0), GridPoint(0,5), size = 6, special = buildMap {
+            put(GridPoint(5,1), element(GridPoint(5,1), ElementType.WOOD))
+            put(GridPoint(4,1), element(GridPoint(4,1), ElementType.FIRE))
+            put(GridPoint(4,2), element(GridPoint(4,2), ElementType.EARTH))
+            put(GridPoint(3,2), element(GridPoint(3,2), ElementType.METAL))
+            put(GridPoint(3,3), element(GridPoint(3,3), ElementType.WATER))
+            // Blocking shortcuts
+            listOf(GridPoint(4,0), GridPoint(5,2), GridPoint(3,1), GridPoint(2,2), GridPoint(4,3), GridPoint(3,4), GridPoint(1,3), GridPoint(0,4)).forEach { put(it, drain(it)) }
         }),
-        level(6, "第六卷 · 古神禁", "古神之禁，不可言传。此前所悟，皆在此阵之中。", GridPoint(3,0), GridPoint(0,3), buildMap {
+        level(6, "第六卷 · 古神禁", "古神之禁，不可言传。此前所悟，皆在此阵之中。", GridPoint(3,0), GridPoint(0,3), special = buildMap {
             put(GridPoint(3,1), element(GridPoint(3,1), ElementType.WOOD))
             put(GridPoint(2,1), element(GridPoint(2,1), ElementType.FIRE))
             put(GridPoint(2,2), mirror(GridPoint(2,2)))
