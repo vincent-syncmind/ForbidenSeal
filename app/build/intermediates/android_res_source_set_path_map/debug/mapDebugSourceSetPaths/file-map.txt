@@ -1,0 +1,8 @@
+com.vincent.forbiddenseal.app-pngs-0 C:\Users\vince\OneDrive\Documents\Work\ForbiddenSeal\app\build\generated\res\pngs\debug
+com.vincent.forbiddenseal.app-updated_navigation_xml-1 C:\Users\vince\OneDrive\Documents\Work\ForbiddenSeal\app\build\generated\updated_navigation_xml\debug
+com.vincent.forbiddenseal.app-packageDebugResources-2 C:\Users\vince\OneDrive\Documents\Work\ForbiddenSeal\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.vincent.forbiddenseal.app-packageDebugResources-3 C:\Users\vince\OneDrive\Documents\Work\ForbiddenSeal\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.vincent.forbiddenseal.app-debug-4 C:\Users\vince\OneDrive\Documents\Work\ForbiddenSeal\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.vincent.forbiddenseal.app-debug-5 C:\Users\vince\OneDrive\Documents\Work\ForbiddenSeal\app\src\debug\res
+com.vincent.forbiddenseal.app-main-6 C:\Users\vince\OneDrive\Documents\Work\ForbiddenSeal\app\src\main\res
+gradleHome-0 C:\Users\vince\.gradle

@@ -1,0 +1,3 @@
+com.vincent.forbiddenseal
+drawable ic_launcher
+style Theme_ForbiddenSeal
