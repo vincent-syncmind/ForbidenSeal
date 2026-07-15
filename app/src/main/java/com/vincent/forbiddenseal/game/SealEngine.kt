@@ -78,11 +78,17 @@ class SealEngine(private val level: SealLevel) {
         if (mirrorPoints.isEmpty()) return MirrorCopyResult(emptyList())
 
         if (mirrorPoints.size >= 2) {
-            val sourceMirror = path.firstOrNull { it in mirrorPoints } ?: return MirrorCopyResult(emptyList())
+            val sourceMirrorIndex = path.indexOfFirst { it in mirrorPoints }
+            if (sourceMirrorIndex == -1) return MirrorCopyResult(emptyList())
+            
+            val sourceMirror = path[sourceMirrorIndex]
             val targetMirror = mirrorPoints.first { it != sourceMirror }
             val rowOffset = targetMirror.row - sourceMirror.row
             val columnOffset = targetMirror.column - sourceMirror.column
-            val copiedPath = path.map { GridPoint(it.row + rowOffset, it.column + columnOffset) }
+            
+            // Mirror only the portion of the path after the first mirror node contact
+            val activePath = path.subList(sourceMirrorIndex, path.size)
+            val copiedPath = activePath.map { GridPoint(it.row + rowOffset, it.column + columnOffset) }
 
             if (copiedPath.any { it.row !in 0 until level.size || it.column !in 0 until level.size }) {
                 return MirrorCopyResult(emptyList(), "镜灵复制超出阵盘，灵路崩散。")
